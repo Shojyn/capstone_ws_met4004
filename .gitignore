@@ -1,0 +1,18 @@
+# CMake and IDE build directories
+build/
+Debug/
+Release/
+
+# Local CMake preset overrides
+CMakeUserPresets.json
+
+# Generated firmware and compiler outputs
+*.elf
+*.bin
+*.hex
+*.o
+*.obj
+*.a
+*.map
+*.d
+*.su
