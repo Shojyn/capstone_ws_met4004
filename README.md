@@ -3,15 +3,15 @@ This repository should contain all the relevant code required to run the Aquacul
 
 ## Firmware and Hardware
 
-- Board: **NUCLEO-F746ZG**, with an STM32F746ZG MCU and built-in ST-LINK debugger.
+- Board: **NUCLEO-F746ZG**, with an STM32F746ZG MCU. The tested board's onboard debugger currently identifies as **SEGGER J-Link** rather than its factory ST-LINK identity.
 - Firmware project: `src/wcs_controller/`.
 - Configuration source: `src/wcs_controller/wcs_controller.ioc`.
 - Generated HAL and CMSIS sources are included in `Drivers/`.
-- Current baseline initializes the board peripherals and uses a 72 MHz system clock. The LED GPIO is configured, but the application loop does not yet blink it.
+- Current baseline initializes the board peripherals, uses a 72 MHz system clock, and toggles green LD1 every 500 ms. The LED test has been verified on the board using J-Link Commander.
 
 ## Development Environment
 
-Contributors need a compatible toolchain, not identical installation paths. The tested workflow is **VS Code connected to WSL**, with Linux-native build tools. Windows STM32CubeMX is used for code generation, and Windows STM32CubeProgrammer can be used for flashing.
+Contributors need a compatible toolchain, not identical installation paths. The tested workflow is **VS Code connected to WSL**, with Linux-native build tools. Windows STM32CubeMX is used for code generation, and Windows J-Link Commander is used for flashing the tested board. SEGGER's IDE is not required.
 
 | Component | Requirement / tested version | Purpose |
 | --- | --- | --- |
@@ -167,7 +167,15 @@ Native Windows builds are also possible with Windows CMake, Ninja, and Arm GNU t
 ## Regenerate or flash firmware
 
 - **Regeneration:** contributors open `wcs_controller.ioc` in Windows STM32CubeMX. This baseline was generated with **CubeMX 6.18.1** and **STM32Cube FW_F7 V1.17.4**. The toolchain selection remains **CMake**, with **Keep User Code when re-generating** enabled. Contributors review the Git diff after generation and place custom code in preserved `USER CODE` sections or separate application files.
-- **Flashing:** the Nucleo board connects through its **ST-LINK USB connector (CN1)** using a data cable. Windows STM32CubeProgrammer programs the built `.elf` through ST-LINK/SWD. A project under `/mnt/c/...` is accessible at the corresponding `C:\...` path on Windows. Flashing and board behavior still need hardware verification.
+- **Flashing:** the Nucleo board connects through its **debugger USB connector (CN1)** using a data cable. The tested board uses Windows J-Link Commander over SWD. Boards still identifying as ST-LINK require an ST-LINK-compatible tool such as STM32CubeProgrammer. The [firmware README](src/wcs_controller/README.md) covers prerequisites, automation, the verified manual procedure, and troubleshooting.
+
+For the J-Link workflow, contributors can build and flash from the repository root in WSL with:
+
+```bash
+bash scripts/flash-jlink.sh
+```
+
+The `--dry-run` option builds and prepares programming files without contacting hardware.
 
 ## Git and commit-message conventions
 
