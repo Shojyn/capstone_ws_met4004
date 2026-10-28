@@ -1,5 +1,23 @@
 # Flashing the NUCLEO-F746ZG
 
+## Interrupt-driven manual valve control
+
+The latching switches control the three valve commands independently:
+
+| Switch input | Relay output | Interrupt |
+| --- | --- | --- |
+| PE5 (`btn_valve_1`) | PE2 (`valve_1`) | EXTI9_5 |
+| PE6 (`btn_valve_2`) | PE3 (`valve_2`) | EXTI9_5 |
+| PF0 (`btn_valve_3`) | PE4 (`valve_3`) | EXTI0 |
+
+Each switch connects its input to 3.3 V when ON; the configured pull-down makes an open switch read LOW. HIGH maintains the OPEN command through the active-high relay, and LOW selects CLOSE. This is level-following control, not press-to-toggle control. Multiple switches may command multiple valves open simultaneously.
+
+Both rising and falling edges invoke the generated EXTI handlers. The application callback records the input level and tick timestamp, restarting a 30 ms debounce interval on every edge. The main loop services pending events after the interval and reads the settled level before changing the output. It does not continuously sample idle inputs, and no delays or relay writes occur inside the interrupt callback. Short critical sections protect the shared interrupt/main-loop state; unsigned tick subtraction handles timestamp rollover.
+
+Outputs initialize LOW. Initial switch sampling also schedules a debounce check, so a switch already ON at startup commands OPEN after 30 ms even without a new edge. The commands do not confirm physical valve position. LD1 continues blinking with a nonblocking 500 ms interval.
+
+After flashing, hardware checks should cover each switch ON/OFF independently, sustained ON states, simultaneous switches, brief bounce-like transitions, and a switch already ON during reset. Idle OFF switches should leave all relay outputs LOW. The interrupt-driven behavior requires verification on the board.
+
 ## Supported workflow
 
 The tested board currently identifies as **SEGGER J-Link** over USB. The LED firmware was successfully programmed using Windows J-Link Commander V7.98h. SEGGER Embedded Studio is not required: editing and compilation remain in VS Code/WSL with CMake, Ninja, and Arm GNU tools.

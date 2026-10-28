@@ -65,12 +65,15 @@ void Error_Handler(void);
 #define valve_3_GPIO_Port GPIOE
 #define btn_valve_1_Pin GPIO_PIN_5
 #define btn_valve_1_GPIO_Port GPIOE
+#define btn_valve_1_EXTI_IRQn EXTI9_5_IRQn
 #define btn_valve_2_Pin GPIO_PIN_6
 #define btn_valve_2_GPIO_Port GPIOE
+#define btn_valve_2_EXTI_IRQn EXTI9_5_IRQn
 #define USER_Btn_Pin GPIO_PIN_13
 #define USER_Btn_GPIO_Port GPIOC
 #define btn_valve_3_Pin GPIO_PIN_0
 #define btn_valve_3_GPIO_Port GPIOF
+#define btn_valve_3_EXTI_IRQn EXTI0_IRQn
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
 #define RMII_MDC_Pin GPIO_PIN_1

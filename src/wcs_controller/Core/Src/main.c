@@ -33,16 +33,17 @@ typedef struct
   uint16_t input_pin;
   GPIO_TypeDef *output_port;
   uint16_t output_pin;
-  GPIO_PinState candidate;
+  volatile GPIO_PinState candidate;
   GPIO_PinState command;
-  uint32_t changed_at;
+  volatile uint32_t changed_at;
+  volatile uint32_t pending;
 } ValveSwitch;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define VALVE_DEBOUNCE_MS 30U
-#define LED_INTERVAL_MS 500U
+#define LED_INTERVAL_MS 50U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -82,11 +83,11 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 static ValveSwitch valve_switches[] =
 {
   {btn_valve_1_GPIO_Port, btn_valve_1_Pin, valve_1_GPIO_Port, valve_1_Pin,
-   GPIO_PIN_RESET, GPIO_PIN_RESET, 0U},
+   GPIO_PIN_RESET, GPIO_PIN_RESET, 0U, 0U},
   {btn_valve_2_GPIO_Port, btn_valve_2_Pin, valve_2_GPIO_Port, valve_2_Pin,
-   GPIO_PIN_RESET, GPIO_PIN_RESET, 0U},
+   GPIO_PIN_RESET, GPIO_PIN_RESET, 0U, 0U},
   {btn_valve_3_GPIO_Port, btn_valve_3_Pin, valve_3_GPIO_Port, valve_3_Pin,
-   GPIO_PIN_RESET, GPIO_PIN_RESET, 0U}
+   GPIO_PIN_RESET, GPIO_PIN_RESET, 0U, 0U}
 };
 static uint32_t led_changed_at;
 /* USER CODE END PV */
@@ -105,27 +106,79 @@ static void MX_USB_OTG_FS_PCD_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-static void ValveSwitches_Update(uint32_t now)
+/* Called by the generated EXTI handlers through the HAL. No delays or relay
+ * writes belong here: each edge simply restarts the debounce interval. */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   for (uint32_t i = 0U; i < sizeof(valve_switches) / sizeof(valve_switches[0]); ++i)
   {
     ValveSwitch *sw = &valve_switches[i];
-    GPIO_PinState input = HAL_GPIO_ReadPin(sw->input_port, sw->input_pin);
-
-    if (input != sw->candidate)
+    if (GPIO_Pin == sw->input_pin)
     {
-      sw->candidate = input;
-      sw->changed_at = now;
+      sw->candidate = HAL_GPIO_ReadPin(sw->input_port, sw->input_pin);
+      sw->changed_at = HAL_GetTick();
+      sw->pending = 1U;
+      break;
+    }
+  }
+}
+
+static void ValveSwitches_Init(void)
+{
+  uint32_t interrupt_state = __get_PRIMASK();
+  __disable_irq();
+  for (uint32_t i = 0U; i < sizeof(valve_switches) / sizeof(valve_switches[0]); ++i)
+  {
+    ValveSwitch *sw = &valve_switches[i];
+    HAL_GPIO_WritePin(sw->output_port, sw->output_pin, GPIO_PIN_RESET);
+    sw->command = GPIO_PIN_RESET;
+    /* A switch already ON at boot need not generate an interrupt. */
+    sw->candidate = HAL_GPIO_ReadPin(sw->input_port, sw->input_pin);
+    sw->changed_at = HAL_GetTick();
+    sw->pending = 1U;
+  }
+  __set_PRIMASK(interrupt_state);
+}
+
+static void ValveSwitches_Update(void)
+{
+  for (uint32_t i = 0U; i < sizeof(valve_switches) / sizeof(valve_switches[0]); ++i)
+  {
+    ValveSwitch *sw = &valve_switches[i];
+    if (sw->pending == 0U)
+    {
+      continue;
     }
 
-    /* Unsigned subtraction also handles HAL_GetTick() wrapping around. */
-    if ((sw->candidate != sw->command) &&
+    /* Protect shared state and output update from a concurrent EXTI callback.
+     * Read the tick here so it cannot predate an interrupt's changed_at. */
+    uint32_t interrupt_state = __get_PRIMASK();
+    __disable_irq();
+    uint32_t now = HAL_GetTick();
+    if ((sw->pending != 0U) &&
         ((uint32_t)(now - sw->changed_at) >= VALVE_DEBOUNCE_MS))
     {
-      sw->command = sw->candidate;
-      /* Active-high relay: SET selects OPEN; RESET selects CLOSE. */
-      HAL_GPIO_WritePin(sw->output_port, sw->output_pin, sw->command);
+      GPIO_PinState input = HAL_GPIO_ReadPin(sw->input_port, sw->input_pin);
+      /* An edge may be waiting for its ISR while interrupts are masked.
+       * Leave it pending for the generated HAL handler to acknowledge. */
+      if ((__HAL_GPIO_EXTI_GET_IT(sw->input_pin) != RESET) ||
+          (input != sw->candidate))
+      {
+        sw->candidate = input;
+        sw->changed_at = now;
+      }
+      else
+      {
+        if (input != sw->command)
+        {
+          sw->command = input;
+          /* Active-high relay: SET selects OPEN; RESET selects CLOSE. */
+          HAL_GPIO_WritePin(sw->output_port, sw->output_pin, input);
+        }
+        sw->pending = 0U;
+      }
     }
+    __set_PRIMASK(interrupt_state);
   }
 }
 /* USER CODE END 0 */
@@ -168,6 +221,7 @@ int main(void)
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
   /* MX_GPIO_Init has already set all valve outputs LOW (CLOSE). */
+  ValveSwitches_Init();
   led_changed_at = HAL_GetTick();
   /* USER CODE END 2 */
 
@@ -179,9 +233,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     uint32_t now = HAL_GetTick();
-    ValveSwitches_Update(now);
+    ValveSwitches_Update();
 
-    /* Keep the 50 ms LED interval without blocking switch polling. */
+    /* Blink without blocking deferred switch debounce processing. */
     if ((uint32_t)(now - led_changed_at) >= LED_INTERVAL_MS)
     {
       led_changed_at = now;
@@ -447,7 +501,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pins : btn_valve_1_Pin btn_valve_2_Pin */
   GPIO_InitStruct.Pin = btn_valve_1_Pin|btn_valve_2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
@@ -459,7 +513,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : btn_valve_3_Pin */
   GPIO_InitStruct.Pin = btn_valve_3_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(btn_valve_3_GPIO_Port, &GPIO_InitStruct);
 
@@ -482,6 +536,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(USB_OverCurrent_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
