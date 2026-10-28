@@ -57,8 +57,20 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define valve_1_Pin GPIO_PIN_2
+#define valve_1_GPIO_Port GPIOE
+#define valve_2_Pin GPIO_PIN_3
+#define valve_2_GPIO_Port GPIOE
+#define valve_3_Pin GPIO_PIN_4
+#define valve_3_GPIO_Port GPIOE
+#define btn_valve_1_Pin GPIO_PIN_5
+#define btn_valve_1_GPIO_Port GPIOE
+#define btn_valve_2_Pin GPIO_PIN_6
+#define btn_valve_2_GPIO_Port GPIOE
 #define USER_Btn_Pin GPIO_PIN_13
 #define USER_Btn_GPIO_Port GPIOC
+#define btn_valve_3_Pin GPIO_PIN_0
+#define btn_valve_3_GPIO_Port GPIOF
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
 #define RMII_MDC_Pin GPIO_PIN_1
