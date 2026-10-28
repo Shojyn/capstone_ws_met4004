@@ -10,13 +10,26 @@ The latching switches control the three valve commands independently:
 | PE6 (`btn_valve_2`) | PE3 (`valve_2`) | EXTI9_5 |
 | PF0 (`btn_valve_3`) | PE4 (`valve_3`) | EXTI0 |
 
-Each switch connects its input to 3.3 V when ON; the configured pull-down makes an open switch read LOW. HIGH maintains the OPEN command through the active-high relay, and LOW selects CLOSE. This is level-following control, not press-to-toggle control. Multiple switches may command multiple valves open simultaneously.
+Each switch connects its input to 3.3 V when ON; the configured pull-down makes an open switch read LOW. Each debounced **OFF → ON** transition toggles only its corresponding valve's commanded state. **ON → OFF does not change the valve**; it rearms the next toggle after debounce. Holding a switch ON does not repeatedly toggle the valve. Multiple valves may be commanded open simultaneously.
+
+For example, valve 1 starts CLOSED. Switching btn1 ON commands OPEN; switching btn1 OFF leaves it OPEN; switching btn1 ON again commands CLOSED. Relay output HIGH maintains OPEN and LOW maintains CLOSE, independently of the current switch position.
 
 Both rising and falling edges invoke the generated EXTI handlers. The application callback records the input level and tick timestamp, restarting a 30 ms debounce interval on every edge. The main loop services pending events after the interval and reads the settled level before changing the output. It does not continuously sample idle inputs, and no delays or relay writes occur inside the interrupt callback. Short critical sections protect the shared interrupt/main-loop state; unsigned tick subtraction handles timestamp rollover.
 
-Outputs initialize LOW. Initial switch sampling also schedules a debounce check, so a switch already ON at startup commands OPEN after 30 ms even without a new edge. The commands do not confirm physical valve position. LD1 continues blinking with a nonblocking 500 ms interval.
+Outputs initialize LOW and all commanded states reset to CLOSED. Each switch must first be observed LOW for 30 ms before its rising transition can toggle a valve. A switch already ON at startup does not open anything; it must be turned OFF, allowed to debounce, then turned ON. The commands do not confirm physical valve position. LD1 continues blinking with the configured nonblocking interval (currently 50 ms).
 
-After flashing, hardware checks should cover each switch ON/OFF independently, sustained ON states, simultaneous switches, brief bounce-like transitions, and a switch already ON during reset. Idle OFF switches should leave all relay outputs LOW. The interrupt-driven behavior requires verification on the board.
+The GPIO mapping and commanded states are owned by `Core/Src/valve_controller.c`, with the API declared in `Core/Inc/valve_controller.h`:
+
+```c
+Valve_Set(VALVE_1, VALVE_OPEN);
+Valve_Set(VALVE_1, VALVE_CLOSED);
+Valve_Toggle(VALVE_1);
+ValveState command = Valve_GetCommand(VALVE_1);
+```
+
+The switch/debounce code calls this API rather than directly driving relay GPIOs. The API is used from main-loop context, not interrupts. Future automation can issue explicit commands through the same interface; manual/automatic authority selection is not implemented yet.
+
+After flashing, hardware checks should cover independent toggles, unchanged outputs on release, sustained ON states without repeated toggles, simultaneous switches, contact bounce, and a switch already ON during reset. All outputs should initially be LOW. The toggle behavior requires verification on the board.
 
 ## Supported workflow
 

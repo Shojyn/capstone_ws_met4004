@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "valve_controller.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,10 +31,9 @@ typedef struct
 {
   GPIO_TypeDef *input_port;
   uint16_t input_pin;
-  GPIO_TypeDef *output_port;
-  uint16_t output_pin;
+  ValveId valve;
   volatile GPIO_PinState candidate;
-  GPIO_PinState command;
+  GPIO_PinState stable;
   volatile uint32_t changed_at;
   volatile uint32_t pending;
 } ValveSwitch;
@@ -82,11 +81,11 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 /* USER CODE BEGIN PV */
 static ValveSwitch valve_switches[] =
 {
-  {btn_valve_1_GPIO_Port, btn_valve_1_Pin, valve_1_GPIO_Port, valve_1_Pin,
+  {btn_valve_1_GPIO_Port, btn_valve_1_Pin, VALVE_1,
    GPIO_PIN_RESET, GPIO_PIN_RESET, 0U, 0U},
-  {btn_valve_2_GPIO_Port, btn_valve_2_Pin, valve_2_GPIO_Port, valve_2_Pin,
+  {btn_valve_2_GPIO_Port, btn_valve_2_Pin, VALVE_2,
    GPIO_PIN_RESET, GPIO_PIN_RESET, 0U, 0U},
-  {btn_valve_3_GPIO_Port, btn_valve_3_Pin, valve_3_GPIO_Port, valve_3_Pin,
+  {btn_valve_3_GPIO_Port, btn_valve_3_Pin, VALVE_3,
    GPIO_PIN_RESET, GPIO_PIN_RESET, 0U, 0U}
 };
 static uint32_t led_changed_at;
@@ -130,9 +129,9 @@ static void ValveSwitches_Init(void)
   for (uint32_t i = 0U; i < sizeof(valve_switches) / sizeof(valve_switches[0]); ++i)
   {
     ValveSwitch *sw = &valve_switches[i];
-    HAL_GPIO_WritePin(sw->output_port, sw->output_pin, GPIO_PIN_RESET);
-    sw->command = GPIO_PIN_RESET;
-    /* A switch already ON at boot need not generate an interrupt. */
+    /* Require a debounced LOW before the first rising-edge action. This also
+     * prevents an already-ON switch at boot from opening a valve. */
+    sw->stable = GPIO_PIN_SET;
     sw->candidate = HAL_GPIO_ReadPin(sw->input_port, sw->input_pin);
     sw->changed_at = HAL_GetTick();
     sw->pending = 1U;
@@ -169,11 +168,13 @@ static void ValveSwitches_Update(void)
       }
       else
       {
-        if (input != sw->command)
+        if (input != sw->stable)
         {
-          sw->command = input;
-          /* Active-high relay: SET selects OPEN; RESET selects CLOSE. */
-          HAL_GPIO_WritePin(sw->output_port, sw->output_pin, input);
+          sw->stable = input;
+          if (input == GPIO_PIN_SET)
+          {
+            Valve_Toggle(sw->valve);
+          }
         }
         sw->pending = 0U;
       }
@@ -221,6 +222,7 @@ int main(void)
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
   /* MX_GPIO_Init has already set all valve outputs LOW (CLOSE). */
+  Valve_Init();
   ValveSwitches_Init();
   led_changed_at = HAL_GetTick();
   /* USER CODE END 2 */
