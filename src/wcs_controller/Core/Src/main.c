@@ -27,12 +27,22 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct
+{
+  GPIO_TypeDef *input_port;
+  uint16_t input_pin;
+  GPIO_TypeDef *output_port;
+  uint16_t output_pin;
+  GPIO_PinState candidate;
+  GPIO_PinState command;
+  uint32_t changed_at;
+} ValveSwitch;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define VALVE_DEBOUNCE_MS 30U
+#define LED_INTERVAL_MS 500U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -69,7 +79,16 @@ UART_HandleTypeDef huart3;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-
+static ValveSwitch valve_switches[] =
+{
+  {btn_valve_1_GPIO_Port, btn_valve_1_Pin, valve_1_GPIO_Port, valve_1_Pin,
+   GPIO_PIN_RESET, GPIO_PIN_RESET, 0U},
+  {btn_valve_2_GPIO_Port, btn_valve_2_Pin, valve_2_GPIO_Port, valve_2_Pin,
+   GPIO_PIN_RESET, GPIO_PIN_RESET, 0U},
+  {btn_valve_3_GPIO_Port, btn_valve_3_Pin, valve_3_GPIO_Port, valve_3_Pin,
+   GPIO_PIN_RESET, GPIO_PIN_RESET, 0U}
+};
+static uint32_t led_changed_at;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -86,7 +105,29 @@ static void MX_USB_OTG_FS_PCD_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void ValveSwitches_Update(uint32_t now)
+{
+  for (uint32_t i = 0U; i < sizeof(valve_switches) / sizeof(valve_switches[0]); ++i)
+  {
+    ValveSwitch *sw = &valve_switches[i];
+    GPIO_PinState input = HAL_GPIO_ReadPin(sw->input_port, sw->input_pin);
 
+    if (input != sw->candidate)
+    {
+      sw->candidate = input;
+      sw->changed_at = now;
+    }
+
+    /* Unsigned subtraction also handles HAL_GetTick() wrapping around. */
+    if ((sw->candidate != sw->command) &&
+        ((uint32_t)(now - sw->changed_at) >= VALVE_DEBOUNCE_MS))
+    {
+      sw->command = sw->candidate;
+      /* Active-high relay: SET selects OPEN; RESET selects CLOSE. */
+      HAL_GPIO_WritePin(sw->output_port, sw->output_pin, sw->command);
+    }
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -126,7 +167,8 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   /* USER CODE BEGIN 2 */
-
+  /* MX_GPIO_Init has already set all valve outputs LOW (CLOSE). */
+  led_changed_at = HAL_GetTick();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -136,9 +178,15 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    /* Blink the green user LED: 500 ms on, 500 ms off. */
-    HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
-    HAL_Delay(500);
+    uint32_t now = HAL_GetTick();
+    ValveSwitches_Update(now);
+
+    /* Keep the 50 ms LED interval without blocking switch polling. */
+    if ((uint32_t)(now - led_changed_at) >= LED_INTERVAL_MS)
+    {
+      led_changed_at = now;
+      HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+    }
   }
   /* USER CODE END 3 */
 }
