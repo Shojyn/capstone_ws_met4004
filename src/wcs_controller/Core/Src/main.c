@@ -42,7 +42,7 @@ typedef struct
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define VALVE_DEBOUNCE_MS 30U
-#define LED_INTERVAL_MS 50U
+#define LED_INTERVAL_MS 250U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -173,7 +173,7 @@ static void ValveSwitches_Update(void)
           sw->stable = input;
           if (input == GPIO_PIN_SET)
           {
-            Valve_Toggle(sw->valve);
+            Valve_StartOperation(sw->valve, now);
           }
         }
         sw->pending = 0U;
@@ -234,14 +234,24 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    uint32_t now = HAL_GetTick();
     ValveSwitches_Update();
+    /* Capture the tick after a switch may have started a valve operation. */
+    uint32_t now = HAL_GetTick();
+    Valve_Update(now);
 
-    /* Blink without blocking deferred switch debounce processing. */
-    if ((uint32_t)(now - led_changed_at) >= LED_INTERVAL_MS)
+    /* Blink LD1 only while the valve is closing. */
+    if (Valve_IsClosing())
     {
+      if ((uint32_t)(now - led_changed_at) >= LED_INTERVAL_MS)
+      {
+        led_changed_at = now;
+        HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
+      }
+    }
+    else
+    {
+      HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
       led_changed_at = now;
-      HAL_GPIO_TogglePin(LD1_GPIO_Port, LD1_Pin);
     }
   }
   /* USER CODE END 3 */
