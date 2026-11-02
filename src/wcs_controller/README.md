@@ -10,26 +10,57 @@ The latching switches control the three valve commands independently:
 | PE6 (`btn_valve_2`) | PE3 (`valve_2`) | EXTI9_5 |
 | PF0 (`btn_valve_3`) | PE4 (`valve_3`) | EXTI0 |
 
-Each switch connects its input to 3.3 V when ON; the configured pull-down makes an open switch read LOW. Each debounced **OFF → ON** transition toggles only its corresponding valve's commanded state. **ON → OFF does not change the valve**; it rearms the next toggle after debounce. Holding a switch ON does not repeatedly toggle the valve. Multiple valves may be commanded open simultaneously.
+Each switch connects its input to 3.3 V when ON; the configured pull-down makes an open switch read LOW. Each debounced **OFF → ON** transition starts one timed operation for its corresponding valve. **ON → OFF does not start anything**; it only rearms the next press after debounce. Holding a switch ON does not repeat the operation.
 
-For example, valve 1 starts CLOSED. Switching btn1 ON commands OPEN; switching btn1 OFF leaves it OPEN; switching btn1 ON again commands CLOSED. Relay output HIGH maintains OPEN and LOW maintains CLOSE, independently of the current switch position.
+A button press starts this nonblocking cycle:
 
-Both rising and falling edges invoke the generated EXTI handlers. The application callback records the input level and tick timestamp, restarting a 30 ms debounce interval on every edge. The main loop services pending events after the interval and reads the settled level before changing the output. It does not continuously sample idle inputs, and no delays or relay writes occur inside the interrupt callback. Short critical sections protect the shared interrupt/main-loop state; unsigned tick subtraction handles timestamp rollover.
+1. Command the valve OPEN.
+2. Allow the 5-second opening travel.
+3. Keep the valve fully open for its purpose-specific dwell time.
+4. Command the valve CLOSED.
+5. Reserve the 5-second closing travel before accepting another operation.
 
-Outputs initialize LOW and all commanded states reset to CLOSED. Each switch must first be observed LOW for 30 ms before its rising transition can toggle a valve. A switch already ON at startup does not open anything; it must be turned OFF, allowed to debounce, then turned ON. The commands do not confirm physical valve position. LD1 continues blinking with the configured nonblocking interval (currently 50 ms).
+Valve purposes and temporary fully-open dwell times:
+
+| Valve | Purpose | Dwell |
+| --- | --- | --- |
+| 1 | Fill the waste concentration tank | 5 s |
+| 2 | Drain the waste concentration tank | 5 s |
+| 3 | Collect the sample | 5 s |
+
+The total output-HIGH time is the 5-second opening plus the purpose dwell. The relay stays LOW during the closing lockout. These dwell values are placeholders and live as defines in `Core/Src/valve_controller.c`.
+
+Only one valve cycle runs at a time to prevent fill, drain, and collection from overlapping. Presses while operating or closing are ignored; there is no queue or timer restart. The ignored button must be released and pressed again after the controller returns to idle.
+
+Both rising and falling edges invoke the generated EXTI handlers. The application callback records the input level and tick timestamp, restarting a 30 ms debounce interval on every edge. The main loop services pending events after the interval and reads the settled level before acting. It does not continuously sample idle inputs, and no delays or relay writes occur inside the interrupt callback. The timed cycle advances through nonblocking `Valve_Update()` calls using unsigned tick subtraction, which also handles timestamp rollover.
+
+Outputs initialize LOW and all commanded states reset to CLOSED. Each switch must first be observed LOW for 30 ms before its rising transition can start an operation. A switch already ON at startup does not start anything; it must be turned OFF, allowed to debounce, then turned ON. The commands do not confirm physical valve position. LD1 blinks at a nonblocking 250 ms interval only during the closing lockout; it is driven LOW during idle, the opening travel, and the fully-open dwell. The valve relay GPIO itself stays steady: HIGH while opening and dwelling, LOW while closing.
 
 The GPIO mapping and commanded states are owned by `Core/Src/valve_controller.c`, with the API declared in `Core/Inc/valve_controller.h`:
 
 ```c
+bool started = Valve_StartOperation(VALVE_1, now);
+Valve_Update(now);
+bool busy = Valve_IsBusy();
 Valve_Set(VALVE_1, VALVE_OPEN);
-Valve_Set(VALVE_1, VALVE_CLOSED);
-Valve_Toggle(VALVE_1);
 ValveState command = Valve_GetCommand(VALVE_1);
 ```
 
-The switch/debounce code calls this API rather than directly driving relay GPIOs. The API is used from main-loop context, not interrupts. Future automation can issue explicit commands through the same interface; manual/automatic authority selection is not implemented yet.
+The switch/debounce code calls this API rather than directly driving relay GPIOs. The API is used from main-loop context, not interrupts. `Valve_StartOperation()` and `Valve_Update()` implement the timed cycle; `Valve_Set()` remains available for direct commands. Future automation can issue commands through the same interface; manual/automatic authority selection is not implemented yet.
 
-After flashing, hardware checks should cover independent toggles, unchanged outputs on release, sustained ON states without repeated toggles, simultaneous switches, contact bounce, and a switch already ON during reset. All outputs should initially be LOW. The toggle behavior requires verification on the board.
+After flashing, hardware checks should cover each timed cycle, output timing, purpose dwells, ignored presses during operation and closing, release/re-press behavior, contact bounce, and a switch already ON during reset. All outputs should initially be LOW. The timed behavior requires verification on the board.
+
+## Host-side valve timing tests
+
+From `src/wcs_controller/` in WSL, run the valve controller tests using the native compiler and a fake GPIO output:
+
+```bash
+cmake -S tests -B build/host-tests
+cmake --build build/host-tests
+ctest --test-dir build/host-tests --output-on-failure
+```
+
+These tests check the opening/dwell/closing boundaries, exclusive operation, relay output commands, and tick wraparound without requiring a board. They do not test the generated EXTI hardware or physical valve motion.
 
 ## Supported workflow
 
