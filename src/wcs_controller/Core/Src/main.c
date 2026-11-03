@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "valve_controller.h"
+#include "linear_actuator_controller.h"
+#include "linear_actuator_manual_control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,6 +111,12 @@ static void MX_USB_OTG_FS_PCD_Init(void);
  * writes belong here: each edge simply restarts the debounce interval. */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+  if (GPIO_Pin == btn_linear_1_Pin)
+  {
+    LinearActuatorManual_OnEdge(HAL_GPIO_ReadPin(btn_linear_1_GPIO_Port, btn_linear_1_Pin) == GPIO_PIN_SET,
+                                HAL_GetTick());
+    return;
+  }
   for (uint32_t i = 0U; i < sizeof(valve_switches) / sizeof(valve_switches[0]); ++i)
   {
     ValveSwitch *sw = &valve_switches[i];
@@ -224,6 +232,12 @@ int main(void)
   /* MX_GPIO_Init has already set all valve outputs LOW (CLOSE). */
   Valve_Init();
   ValveSwitches_Init();
+  uint32_t interrupt_state = __get_PRIMASK();
+  __disable_irq();
+  LinearActuator_Init();
+  LinearActuatorManual_Init(HAL_GPIO_ReadPin(btn_linear_1_GPIO_Port, btn_linear_1_Pin) == GPIO_PIN_SET,
+                            HAL_GetTick());
+  __set_PRIMASK(interrupt_state);
   led_changed_at = HAL_GetTick();
   /* USER CODE END 2 */
 
@@ -234,6 +248,12 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    LinearActuator_Update(HAL_GetTick());
+    uint32_t interrupt_state = __get_PRIMASK();
+    __disable_irq();
+    LinearActuatorManual_Update(HAL_GPIO_ReadPin(btn_linear_1_GPIO_Port, btn_linear_1_Pin) == GPIO_PIN_SET,
+                                HAL_GetTick(), __HAL_GPIO_EXTI_GET_IT(btn_linear_1_Pin) != RESET);
+    __set_PRIMASK(interrupt_state);
     ValveSwitches_Update();
     /* Capture the tick after a switch may have started a valve operation. */
     uint32_t now = HAL_GetTick();
