@@ -1,5 +1,15 @@
 # Flashing the NUCLEO-F746ZG
 
+## Linear actuator test (L298N)
+
+The independent actuator test uses PF1 (`btn_linear_1`) as an active-high button with internal pull-down, PF2 (`in1_linear_1`) for L298N IN1, and PF3 (`in2_linear_1`) for IN2. Connect the button between PF1 and 3.3 V. Connect Nucleo and L298N grounds, and connect a separate rated 12 V supply to the L298N motor supply input; connect the two actuator motor leads to OUT1/OUT2. Leave ENA jumpered and do not connect the L298N 5 V terminal to the Nucleo. Check the actuator's stall current against the driver's actual rating before powering it.
+
+With ENA jumpered, both direction outputs LOW stop/brake the motor. The first debounced OFF → ON press commands PF2 HIGH/PF3 LOW (extend); the next successful start commands PF2 LOW/PF3 HIGH (retract). A press during motion stops it (after the 30 ms debounce), while release merely rearms the button. Each movement automatically stops after **1 second** of drive. A 50 ms LOW/LOW interval is enforced before a new direction starts after a stop; a press during that interval schedules the requested direction, and another press can cancel it. At boot both outputs are LOW, and a button held HIGH at boot cannot start motion until released and pressed again.
+
+`Core/Src/linear_actuator_controller.c` owns PF2/PF3, direction states, the one-second timeout, and the reversal pause. `Core/Src/linear_actuator_manual_control.c` owns PF1 debounce and the one-button alternating-direction policy. The EXTI callback only records an edge; all motor writes occur from the main loop. The valve and actuator controllers are independent.
+
+There is no actuator position sensing or end limit. Begin away from both mechanical ends: even a one-second timeout cannot prevent an endpoint impact when less than one second of travel remains. If the physical direction is reversed, exchange the motor leads. Test PF2/PF3 LOW at boot, first-press extend, timeout stop, next-press retract, press-to-stop, release-to-rearm, and valve independence on the board.
+
 ## Interrupt-driven manual valve control
 
 The latching switches control the three valve commands independently:
@@ -52,7 +62,7 @@ After flashing, hardware checks should cover each timed cycle, output timing, pu
 
 ## Host-side valve timing tests
 
-From `src/wcs_controller/` in WSL, run the valve controller tests using the native compiler and a fake GPIO output:
+From `src/wcs_controller/` in WSL, run the valve and actuator tests using the native compiler and fake GPIO outputs:
 
 ```bash
 cmake -S tests -B build/host-tests
@@ -60,7 +70,7 @@ cmake --build build/host-tests
 ctest --test-dir build/host-tests --output-on-failure
 ```
 
-These tests check the opening/dwell/closing boundaries, exclusive operation, relay output commands, and tick wraparound without requiring a board. They do not test the generated EXTI hardware or physical valve motion.
+These tests check valve timing and actuator direction, button handling, timeout, reversal pause, and tick wraparound without a board. They do not test the generated EXTI hardware or physical actuator/valve motion.
 
 ## Supported workflow
 
