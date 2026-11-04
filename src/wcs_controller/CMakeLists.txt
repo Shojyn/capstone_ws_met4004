@@ -47,6 +47,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/valve_controller.c
     Core/Src/linear_actuator_controller.c
     Core/Src/linear_actuator_manual_control.c
+    third_party/segger_rtt/RTT/SEGGER_RTT.c
+    third_party/segger_rtt/RTT/SEGGER_RTT_printf.c
 )
 
 # Generate the firmware version header from the Git state at configure time.
@@ -82,6 +84,8 @@ target_link_options(${CMAKE_PROJECT_NAME} PRIVATE -Wl,--undefined=fw_version_ban
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_BINARY_DIR}/generated
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/segger_rtt/RTT
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/segger_rtt/Config
 )
 
 # Add project symbols (macros)
