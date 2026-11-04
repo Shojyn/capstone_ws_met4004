@@ -7,7 +7,7 @@ This repository should contain all the relevant code required to run the Aquacul
 - Firmware project: `src/wcs_controller/`.
 - Configuration source: `src/wcs_controller/wcs_controller.ioc`.
 - Generated HAL and CMSIS sources are included in `Drivers/`.
-- Current baseline initializes the board peripherals, uses a 72 MHz system clock, and toggles green LD1 every 500 ms. The LED test has been verified on the board using J-Link Commander.
+- Current firmware initializes the board at 72 MHz, runs the three timed valve cycles, and provides an independent manual linear-actuator test. LD1 blinks only while a valve is closing. See [CHANGELOG.md](CHANGELOG.md) for release status and [docs/hardware.md](docs/hardware.md) for wiring and test checks.
 
 ## Development Environment
 
@@ -194,6 +194,8 @@ The description concisely states the actual change, preferably starting with an 
 | `chore` | Configuration, maintenance, and README updates, matching the existing history |
 | `refactor` | Code restructuring without an intended behavior change |
 | `test` | Tests and test infrastructure |
+| `docs` | Documentation and hardware references |
+| `ci` | Continuous integration and automation |
 
 Examples:
 
@@ -209,6 +211,10 @@ fix(stm): correct valve timeout handling
 - Version-controlled files include `.gitignore`, `.ioc`, generated sources and headers, drivers, startup assembly, linker scripts, and CMake files.
 - Build outputs and personal settings remain outside Git. `.gitignore` excludes build directories, compiler outputs, and `CMakeUserPresets.json`.
 - Contributors review `git status` and the staged diff (`git diff --cached`) before committing, stage only intended files, and perform a build check for firmware changes.
+
+## Changelog and releases
+
+Every push to `main` updates [CHANGELOG.md](CHANGELOG.md), creates one tag (`v0.x.y`), and publishes a GitHub Release from that tag. Use a patch bump for fixes and a minor bump for new features. Record build, host-test, and hardware verification status in the same entry; do not claim hardware verification from a successful flash alone.
 
 # Commit Check
 Each contributor adds an X next to their name and commits the change.\
