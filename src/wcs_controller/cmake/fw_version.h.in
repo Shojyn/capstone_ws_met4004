@@ -1,0 +1,8 @@
+#ifndef FW_VERSION_H
+#define FW_VERSION_H
+
+#define FW_VERSION_STRING "@FW_VERSION@"
+#define FW_GIT_COMMIT_STRING "@FW_GIT_COMMIT@"
+#define FW_BUILD_TYPE_STRING "@FW_BUILD_TYPE@"
+
+#endif

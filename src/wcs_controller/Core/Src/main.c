@@ -25,6 +25,7 @@
 #include "valve_controller.h"
 #include "linear_actuator_controller.h"
 #include "linear_actuator_manual_control.h"
+#include "fw_version.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -107,6 +108,10 @@ static void MX_USB_OTG_FS_PCD_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+__attribute__((used)) const char fw_version_banner[] =
+    "wcs_controller " FW_VERSION_STRING " (" FW_GIT_COMMIT_STRING ", "
+    FW_BUILD_TYPE_STRING ")";
+
 /* Called by the generated EXTI handlers through the HAL. No delays or relay
  * writes belong here: each edge simply restarts the debounce interval. */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)

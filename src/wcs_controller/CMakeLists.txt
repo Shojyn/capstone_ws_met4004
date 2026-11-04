@@ -49,9 +49,39 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/linear_actuator_manual_control.c
 )
 
+# Generate the firmware version header from the Git state at configure time.
+set(FW_VERSION "unknown")
+set(FW_GIT_COMMIT "unknown")
+find_package(Git QUIET)
+if(GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} -C ${CMAKE_CURRENT_SOURCE_DIR} describe --tags --always --dirty
+        OUTPUT_VARIABLE FW_VERSION
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE FW_VERSION_RESULT
+    )
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} -C ${CMAKE_CURRENT_SOURCE_DIR} rev-parse --short HEAD
+        OUTPUT_VARIABLE FW_GIT_COMMIT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE FW_COMMIT_RESULT
+    )
+    if(NOT FW_VERSION_RESULT EQUAL 0)
+        set(FW_VERSION "unknown")
+    endif()
+    if(NOT FW_COMMIT_RESULT EQUAL 0)
+        set(FW_GIT_COMMIT "unknown")
+    endif()
+endif()
+set(FW_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
+configure_file(cmake/fw_version.h.in ${CMAKE_BINARY_DIR}/generated/fw_version.h @ONLY)
+target_link_options(${CMAKE_PROJECT_NAME} PRIVATE -Wl,--undefined=fw_version_banner)
+
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user defined include paths
+    ${CMAKE_BINARY_DIR}/generated
 )
 
 # Add project symbols (macros)
