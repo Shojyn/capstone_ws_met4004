@@ -81,6 +81,8 @@ void Error_Handler(void);
 #define in1_linear_1_GPIO_Port GPIOF
 #define in2_linear_1_Pin GPIO_PIN_3
 #define in2_linear_1_GPIO_Port GPIOF
+#define sensor_water_level_Pin GPIO_PIN_4
+#define sensor_water_level_GPIO_Port GPIOF
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
 #define RMII_MDC_Pin GPIO_PIN_1
