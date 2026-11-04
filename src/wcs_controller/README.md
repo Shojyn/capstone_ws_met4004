@@ -1,5 +1,7 @@
 # Flashing the NUCLEO-F746ZG
 
+Board wiring and board-level checks are in the [hardware reference](../../docs/hardware.md); release history is in [CHANGELOG.md](../../CHANGELOG.md).
+
 ## Linear actuator test (L298N)
 
 The independent actuator test uses PF1 (`btn_linear_1`) as an active-high button with internal pull-down, PF2 (`in1_linear_1`) for L298N IN1, and PF3 (`in2_linear_1`) for IN2. Connect the button between PF1 and 3.3 V. Connect Nucleo and L298N grounds, and connect a separate rated 12 V supply to the L298N motor supply input; connect the two actuator motor leads to OUT1/OUT2. Leave ENA jumpered and do not connect the L298N 5 V terminal to the Nucleo. Check the actuator's stall current against the driver's actual rating before powering it.
