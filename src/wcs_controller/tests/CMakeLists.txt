@@ -27,3 +27,13 @@ target_include_directories(test_linear_actuator PRIVATE
 )
 target_compile_options(test_linear_actuator PRIVATE -Wall -Wextra -Werror)
 add_test(NAME linear_actuator COMMAND test_linear_actuator)
+
+add_executable(test_water_sensor
+    test_water_sensor.c
+    ../Core/Src/water_sensor.c
+)
+target_include_directories(test_water_sensor PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../Core/Inc
+)
+target_compile_options(test_water_sensor PRIVATE -Wall -Wextra -Werror)
+add_test(NAME water_sensor COMMAND test_water_sensor)

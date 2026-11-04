@@ -26,6 +26,9 @@
 #include "linear_actuator_controller.h"
 #include "linear_actuator_manual_control.h"
 #include "fw_version.h"
+#include "water_sensor.h"
+#include "water_sensor_adc.h"
+#include "water_sensor_telemetry.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -94,6 +97,7 @@ static ValveSwitch valve_switches[] =
    GPIO_PIN_RESET, GPIO_PIN_RESET, 0U, 0U}
 };
 static uint32_t led_changed_at;
+static uint32_t water_led_changed_at;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -247,7 +251,10 @@ int main(void)
   LinearActuatorManual_Init(HAL_GPIO_ReadPin(btn_linear_1_GPIO_Port, btn_linear_1_Pin) == GPIO_PIN_SET,
                             HAL_GetTick());
   __set_PRIMASK(interrupt_state);
+  WaterSensor_Init(WaterSensorAdc_Read, HAL_GetTick());
+  WaterSensorTelemetry_Init(HAL_GetTick());
   led_changed_at = HAL_GetTick();
+  water_led_changed_at = led_changed_at;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -257,6 +264,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    uint32_t now = HAL_GetTick();
+    WaterSensor_Update(now);
+    WaterSensorTelemetry_Update(now);
     LinearActuator_Update(HAL_GetTick());
     uint32_t interrupt_state = __get_PRIMASK();
     __disable_irq();
@@ -265,7 +275,6 @@ int main(void)
     __set_PRIMASK(interrupt_state);
     ValveSwitches_Update();
     /* Capture the tick after a switch may have started a valve operation. */
-    uint32_t now = HAL_GetTick();
     Valve_Update(now);
 
     /* Blink LD1 only while the valve is closing. */
@@ -281,6 +290,20 @@ int main(void)
     {
       HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, GPIO_PIN_RESET);
       led_changed_at = now;
+    }
+
+    if (WaterSensor_IsDetected())
+    {
+      if ((uint32_t)(now - water_led_changed_at) >= LED_INTERVAL_MS)
+      {
+        water_led_changed_at = now;
+        HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+      }
+    }
+    else
+    {
+      HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+      water_led_changed_at = now;
     }
   }
   /* USER CODE END 3 */

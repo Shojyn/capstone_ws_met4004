@@ -47,6 +47,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/valve_controller.c
     Core/Src/linear_actuator_controller.c
     Core/Src/linear_actuator_manual_control.c
+    Core/Src/water_sensor.c
+    Core/Src/water_sensor_adc.c
+    Core/Src/water_sensor_telemetry.c
     third_party/segger_rtt/RTT/SEGGER_RTT.c
     third_party/segger_rtt/RTT/SEGGER_RTT_printf.c
 )
