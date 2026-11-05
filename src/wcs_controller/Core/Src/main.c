@@ -98,6 +98,7 @@ static ValveSwitch valve_switches[] =
 };
 static uint32_t led_changed_at;
 static uint32_t water_led_changed_at;
+static bool valve1_sequence_active;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -159,8 +160,9 @@ static void ValveSwitches_Init(void)
   __set_PRIMASK(interrupt_state);
 }
 
-static void ValveSwitches_Update(void)
+static ValveId ValveSwitches_Update(void)
 {
+  ValveId started_valve = VALVE_COUNT;
   for (uint32_t i = 0U; i < sizeof(valve_switches) / sizeof(valve_switches[0]); ++i)
   {
     ValveSwitch *sw = &valve_switches[i];
@@ -193,7 +195,10 @@ static void ValveSwitches_Update(void)
           sw->stable = input;
           if (input == GPIO_PIN_SET)
           {
-            Valve_StartOperation(sw->valve, now);
+            if (Valve_StartOperation(sw->valve, now))
+            {
+              started_valve = sw->valve;
+            }
           }
         }
         sw->pending = 0U;
@@ -201,6 +206,7 @@ static void ValveSwitches_Update(void)
     }
     __set_PRIMASK(interrupt_state);
   }
+  return started_valve;
 }
 /* USER CODE END 0 */
 
@@ -276,7 +282,23 @@ int main(void)
     __set_PRIMASK(interrupt_state);
     /* End a valve lockout before accepting a new button press at its boundary. */
     Valve_Update(now);
-    ValveSwitches_Update();
+    if (Valve_GetActiveValve() == VALVE_1 &&
+        WaterSensor_GetSignalPercent() >= 100U)
+    {
+      Valve_RequestClose(VALVE_1, now);
+    }
+    ValveId started_valve = ValveSwitches_Update();
+    if (started_valve == VALVE_1)
+    {
+      valve1_sequence_active = true;
+    }
+    if (valve1_sequence_active && !Valve_IsBusy())
+    {
+      if (Valve_StartOperation(VALVE_2, now))
+      {
+        valve1_sequence_active = false;
+      }
+    }
     now = HAL_GetTick();
 
     /* Blink LD1 only while the valve is closing. */

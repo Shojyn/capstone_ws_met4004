@@ -52,11 +52,16 @@ static void TestTimingAndLockout(void)
   assert(outputs[0] == GPIO_PIN_SET);
 
   Valve_Update(10100U);
-  assert(!Valve_IsDwelling(10100U));
-  assert(Valve_IsClosing());
+  assert(Valve_IsDwelling(10100U));
+  assert(!Valve_IsClosing());
   assert(Valve_IsBusy());
+  assert(outputs[0] == GPIO_PIN_SET);
+  assert(Valve_GetCommand(VALVE_1) == VALVE_OPEN);
+  assert(Valve_RequestClose(VALVE_1, 10100U));
+  assert(Valve_IsClosing());
   assert(outputs[0] == GPIO_PIN_RESET);
   assert(Valve_GetCommand(VALVE_1) == VALVE_CLOSED);
+  assert(!Valve_RequestClose(VALVE_1, 10101U));
   assert(!Valve_StartOperation(VALVE_3, 10101U));
 
   Valve_Update(15099U);

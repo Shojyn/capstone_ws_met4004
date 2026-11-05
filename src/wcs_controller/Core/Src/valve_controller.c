@@ -83,9 +83,25 @@ bool Valve_StartOperation(ValveId valve, uint32_t now)
   return true;
 }
 
+bool Valve_RequestClose(ValveId valve, uint32_t now)
+{
+  if ((unsigned int)valve >= VALVE_COUNT ||
+      phase != VALVE_PHASE_OPERATING ||
+      active_valve != valve ||
+      Valve_GetCommand(valve) != VALVE_OPEN)
+  {
+    return false;
+  }
+  Valve_Set(active_valve, VALVE_CLOSED);
+  phase = VALVE_PHASE_CLOSING;
+  phase_started_at = now;
+  return true;
+}
+
 void Valve_Update(uint32_t now)
 {
   if (phase == VALVE_PHASE_OPERATING &&
+      active_valve != VALVE_1 &&
       ((uint32_t)(now - phase_started_at) >= valves[active_valve].operation_ms))
   {
     Valve_Set(active_valve, VALVE_CLOSED);
@@ -112,10 +128,15 @@ bool Valve_IsDwelling(uint32_t now)
   }
   uint32_t elapsed = now - phase_started_at;
   return (elapsed >= VALVE_OPENING_TIME_MS) &&
-         (elapsed < valves[active_valve].operation_ms);
+         (active_valve == VALVE_1 || elapsed < valves[active_valve].operation_ms);
 }
 
 bool Valve_IsClosing(void)
 {
   return phase == VALVE_PHASE_CLOSING;
+}
+
+ValveId Valve_GetActiveValve(void)
+{
+  return active_valve;
 }
