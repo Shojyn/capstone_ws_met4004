@@ -266,6 +266,7 @@ int main(void)
     /* USER CODE BEGIN 3 */
     uint32_t now = HAL_GetTick();
     WaterSensor_Update(now);
+    now = HAL_GetTick();
     WaterSensorTelemetry_Update(now);
     LinearActuator_Update(HAL_GetTick());
     uint32_t interrupt_state = __get_PRIMASK();
@@ -273,9 +274,10 @@ int main(void)
     LinearActuatorManual_Update(HAL_GPIO_ReadPin(btn_linear_1_GPIO_Port, btn_linear_1_Pin) == GPIO_PIN_SET,
                                 HAL_GetTick(), __HAL_GPIO_EXTI_GET_IT(btn_linear_1_Pin) != RESET);
     __set_PRIMASK(interrupt_state);
-    ValveSwitches_Update();
-    /* Capture the tick after a switch may have started a valve operation. */
+    /* End a valve lockout before accepting a new button press at its boundary. */
     Valve_Update(now);
+    ValveSwitches_Update();
+    now = HAL_GetTick();
 
     /* Blink LD1 only while the valve is closing. */
     if (Valve_IsClosing())
