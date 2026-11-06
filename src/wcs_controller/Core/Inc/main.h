@@ -49,6 +49,8 @@ extern "C" {
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -83,6 +85,10 @@ void Error_Handler(void);
 #define in2_linear_1_GPIO_Port GPIOF
 #define sensor_water_level_Pin GPIO_PIN_4
 #define sensor_water_level_GPIO_Port GPIOF
+#define stepper_cw_Pin GPIO_PIN_5
+#define stepper_cw_GPIO_Port GPIOF
+#define stepper_c2w_Pin GPIO_PIN_6
+#define stepper_c2w_GPIO_Port GPIOF
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
 #define RMII_MDC_Pin GPIO_PIN_1
@@ -91,6 +97,8 @@ void Error_Handler(void);
 #define RMII_REF_CLK_GPIO_Port GPIOA
 #define RMII_MDIO_Pin GPIO_PIN_2
 #define RMII_MDIO_GPIO_Port GPIOA
+#define stepper_dir_Pin GPIO_PIN_5
+#define stepper_dir_GPIO_Port GPIOA
 #define RMII_CRS_DV_Pin GPIO_PIN_7
 #define RMII_CRS_DV_GPIO_Port GPIOA
 #define RMII_RXD0_Pin GPIO_PIN_4
