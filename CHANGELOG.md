@@ -9,6 +9,31 @@ Each entry corresponds to one push to `main` and one Git tag.
 
 ## [Unreleased]
 
+### Added
+
+- Water-level-controlled Valve 1 operation using the YwRobot/YUROBOT sensor on
+  ADC3/PF4.
+- Automatic Valve 1 to Valve 2 sequencing after the water-level threshold is
+  reached.
+
+### Changed
+
+- Valve 1 now remains open until the filtered water signal reaches 100%.
+- Valve 1 closes for the existing 5-second lockout, then Valve 2 opens for 10
+  seconds and observes its own 5-second lockout.
+- Valve close requests are accepted only for an active/open valve.
+
+### Verified
+
+- Firmware builds successfully; FLASH 27072 B, RAM 5064 B.
+- Host tests pass 3/3.
+
+### Pending hardware verification
+
+- Confirm Valve 1 remains open until the sensor reports 100%.
+- Confirm Valve 2 starts automatically after Valve 1's lockout.
+- Confirm both closing lockouts and LD1 behavior on the board.
+
 ## [0.3.0] - 2026-11-03
 
 Firmware commits: `8075f2e..b3b18d7`

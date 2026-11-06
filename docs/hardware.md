@@ -62,10 +62,14 @@ If the physical direction is reversed, exchange the motor leads.
 
 ## Valve behavior
 
-Each valve button starts one timed operation. A valve opens, dwells fully open,
-closes, and then enters a lockout. Operations are exclusive: a second button press
-while a cycle is active is ignored. LD1 blinks at 250 ms only during the closing
-phase. These are commanded states; there is no valve position feedback.
+Valve 1 starts when `btn_valve_1` is pressed and remains open until the filtered
+water-sensor signal reaches 100%. It then closes and enters a 5-second lockout.
+After that lockout, Valve 2 opens automatically for 10 seconds, closes, and
+enters its own 5-second lockout. Direct Valve 2 and Valve 3 operations also use
+10 seconds open followed by a 5-second lockout. Operations are exclusive: a
+second button press while a cycle is active is ignored. LD1 blinks at 250 ms
+only during the closing phase. These are commanded states; there is no valve
+position feedback.
 
 ## Linear actuator behavior
 
@@ -114,12 +118,14 @@ Terminal 0. J-Link Commander must be closed before RTT Viewer connects.
 3. Press again: actuator retracts and stops within 1 s.
 4. Press during motion: actuator stops promptly.
 5. Hold PF1 at reset: no motion until release and a new press.
-6. Press each valve button: valve opens, dwells, closes; LD1 blinks while closing.
-7. Confirm actuator movement does not disturb an active valve cycle.
-8. Confirm the water sensor is 0 V dry and rises when the traces are wetted; verify
+6. Press Valve 1: it remains open until the water signal reaches 100%.
+7. Confirm Valve 1 closes, LD1 blinks for 5 seconds, and Valve 2 opens automatically.
+8. Confirm Valve 2 closes after 10 seconds and LD1 blinks for its 5-second lockout.
+9. Confirm actuator movement does not disturb an active valve cycle.
+10. Confirm the water sensor is 0 V dry and rises when the traces are wetted; verify
    LD2 blinks when the detection threshold is crossed.
-9. Confirm RTT Terminal 0 reports raw ADC, filtered ADC, millivolts, signal
+11. Confirm RTT Terminal 0 reports raw ADC, filtered ADC, millivolts, signal
    percentage, and state.
-10. Verify the embedded version with
+12. Verify the embedded version with
    `arm-none-eabi-strings build/Debug/wcs_controller.elf | grep '^wcs_controller'`
    and compare it with `CHANGELOG.md`.

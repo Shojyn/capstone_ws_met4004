@@ -22,43 +22,54 @@ The latching switches control the three valve commands independently:
 | PE6 (`btn_valve_2`) | PE3 (`valve_2`) | EXTI9_5 |
 | PF0 (`btn_valve_3`) | PE4 (`valve_3`) | EXTI0 |
 
-Each switch connects its input to 3.3 V when ON; the configured pull-down makes an open switch read LOW. Each debounced **OFF → ON** transition starts one timed operation for its corresponding valve. **ON → OFF does not start anything**; it only rearms the next press after debounce. Holding a switch ON does not repeat the operation.
+Each switch connects its input to 3.3 V when ON; the configured pull-down makes an open switch read LOW. Each debounced **OFF → ON** transition starts an operation when the controller is idle. **ON → OFF does not start anything**; it only rearms the next press after debounce. Holding a switch ON does not repeat the operation.
 
-A button press starts this nonblocking cycle:
+A `btn_valve_1` press starts this nonblocking sequence:
 
 1. Command the valve OPEN.
-2. Allow the 5-second opening travel.
-3. Keep the valve fully open for its purpose-specific dwell time.
-4. Command the valve CLOSED.
-5. Reserve the 5-second closing travel before accepting another operation.
+2. Keep Valve 1 open until the filtered water-sensor signal reaches 100%.
+3. Command Valve 1 CLOSED and reserve the 5-second closing lockout.
+4. Open Valve 2 automatically after the Valve 1 lockout.
+5. Keep Valve 2 open for 10 seconds, then command it CLOSED.
+6. Reserve Valve 2's 5-second closing lockout before accepting another operation.
 
-Valve purposes and temporary fully-open dwell times:
+Direct presses of `btn_valve_2` and `btn_valve_3` start their respective
+10-second output-high operation followed by a 5-second closing lockout. A close
+request is accepted only for the currently active valve while its output is
+open; closed or inactive valves are not closed again.
 
-| Valve | Purpose | Dwell |
+Valve purposes and timing:
+
+| Valve | Purpose | Open behavior |
 | --- | --- | --- |
-| 1 | Fill the waste concentration tank | 5 s |
-| 2 | Drain the waste concentration tank | 5 s |
-| 3 | Collect the sample | 5 s |
+| 1 | Fill the waste concentration tank | Until water signal reaches 100% |
+| 2 | Drain the waste concentration tank | 10 s |
+| 3 | Collect the sample | 10 s |
 
-The total output-HIGH time is the 5-second opening plus the purpose dwell. The relay stays LOW during the closing lockout. These dwell values are placeholders and live as defines in `Core/Src/valve_controller.c`.
+Valve 1's output remains HIGH until the water threshold is reached. Valve 2 and
+Valve 3 outputs remain HIGH for 10 seconds. Every valve relay stays LOW during
+its 5-second closing lockout. These timings live in
+`Core/Src/valve_controller.c`.
 
 Only one valve cycle runs at a time to prevent fill, drain, and collection from overlapping. Presses while operating or closing are ignored; there is no queue or timer restart. The ignored button must be released and pressed again after the controller returns to idle.
 
 Both rising and falling edges invoke the generated EXTI handlers. The application callback records the input level and tick timestamp, restarting a 30 ms debounce interval on every edge. The main loop services pending events after the interval and reads the settled level before acting. It does not continuously sample idle inputs, and no delays or relay writes occur inside the interrupt callback. The timed cycle advances through nonblocking `Valve_Update()` calls using unsigned tick subtraction, which also handles timestamp rollover.
 
-Outputs initialize LOW and all commanded states reset to CLOSED. Each switch must first be observed LOW for 30 ms before its rising transition can start an operation. A switch already ON at startup does not start anything; it must be turned OFF, allowed to debounce, then turned ON. The commands do not confirm physical valve position. LD1 blinks at a nonblocking 250 ms interval only during the closing lockout; it is driven LOW during idle, the opening travel, and the fully-open dwell. The valve relay GPIO itself stays steady: HIGH while opening and dwelling, LOW while closing.
+Outputs initialize LOW and all commanded states reset to CLOSED. Each switch must first be observed LOW for 30 ms before its rising transition can start an operation. A switch already ON at startup does not start anything; it must be turned OFF, allowed to debounce, then turned ON. The commands do not confirm physical valve position. LD1 blinks at a nonblocking 250 ms interval only during the closing lockout; it is driven LOW during idle and while a valve output is open. The valve relay GPIO itself stays steady: HIGH while open and LOW during the closing lockout.
 
 The GPIO mapping and commanded states are owned by `Core/Src/valve_controller.c`, with the API declared in `Core/Inc/valve_controller.h`:
 
 ```c
 bool started = Valve_StartOperation(VALVE_1, now);
+bool closed = Valve_RequestClose(VALVE_1, now);
 Valve_Update(now);
 bool busy = Valve_IsBusy();
+ValveId active = Valve_GetActiveValve();
 Valve_Set(VALVE_1, VALVE_OPEN);
 ValveState command = Valve_GetCommand(VALVE_1);
 ```
 
-The switch/debounce code calls this API rather than directly driving relay GPIOs. The API is used from main-loop context, not interrupts. `Valve_StartOperation()` and `Valve_Update()` implement the timed cycle; `Valve_Set()` remains available for direct commands. Future automation can issue commands through the same interface; manual/automatic authority selection is not implemented yet.
+The switch/debounce code calls this API rather than directly driving relay GPIOs. The API is used from main-loop context, not interrupts. `Valve_StartOperation()` and `Valve_Update()` implement the valve timing, while `Valve_RequestClose()` closes only the active/open valve. `Valve_Set()` remains available for direct commands. The water-level sequence is coordinated from the main loop.
 
 After flashing, hardware checks should cover each timed cycle, output timing, purpose dwells, ignored presses during operation and closing, release/re-press behavior, contact bounce, and a switch already ON during reset. All outputs should initially be LOW. The timed behavior requires verification on the board.
 
