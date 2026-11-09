@@ -28,6 +28,10 @@ test procedure for the NUCLEO-F746ZG controller.
 | L298N IN1 | PF2 | Push-pull output | LOW at boot |
 | L298N IN2 | PF3 | Push-pull output | LOW at boot |
 | Water sensor OUT | PF4 | ADC3_IN14, analog | 3.3 V sensor signal |
+| Stepper clockwise button | PF5 | Digital input, pull-down | Reserved for active-high button input |
+| Stepper counter-clockwise button | PF6 | Digital input, pull-down | Reserved for active-high button input |
+| Stepper direction | PA5 | Push-pull output | LOW at boot |
+| Stepper STEP | PA6 | TIM3 CH1 alternate function | 100 Hz, active-low PWM configuration |
 | LD1 | PB0 | Push-pull output | Blinks only while a valve is closing |
 | LD2 | PB7 | Push-pull output | Blinks while water is detected |
 | User button | PC13 | Input | Not used by the application |
@@ -36,6 +40,20 @@ test procedure for the NUCLEO-F746ZG controller.
 
 Buttons connect between the pin and 3.3 V. All valve and actuator outputs are
 driven LOW at startup.
+
+## Stepper initialization checkpoint
+
+The latest committed firmware configures the stepper hardware interface but does
+not yet implement button-driven movement. PF5 and PF6 are reserved for the
+clockwise and counter-clockwise buttons respectively, with internal pull-downs.
+PA5 is the direction output and initializes LOW. PA6 is TIM3 channel 1 and is
+configured for a 100 Hz active-low PWM signal with a 10 microsecond configured
+pulse. The TIM3 global interrupt is enabled in the generated NVIC/MSP setup.
+
+TIM3 PWM is not started during initialization, so PA6 does not generate a motor
+command until runtime stepper control is added. The button inputs are currently
+ordinary polled GPIOs; no stepper debounce or movement policy is included in
+this committed checkpoint.
 
 ## 12 V actuator power and L298N wiring
 
