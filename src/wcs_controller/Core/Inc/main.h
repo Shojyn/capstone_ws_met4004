@@ -87,8 +87,8 @@ void Error_Handler(void);
 #define sensor_water_level_GPIO_Port GPIOF
 #define stepper_cw_Pin GPIO_PIN_5
 #define stepper_cw_GPIO_Port GPIOF
-#define stepper_c2w_Pin GPIO_PIN_6
-#define stepper_c2w_GPIO_Port GPIOF
+#define stepper_ccw_Pin GPIO_PIN_6
+#define stepper_ccw_GPIO_Port GPIOF
 #define MCO_Pin GPIO_PIN_0
 #define MCO_GPIO_Port GPIOH
 #define RMII_MDC_Pin GPIO_PIN_1
