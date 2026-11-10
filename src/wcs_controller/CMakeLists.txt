@@ -50,6 +50,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/water_sensor.c
     Core/Src/water_sensor_adc.c
     Core/Src/water_sensor_telemetry.c
+    Core/Src/stepper_controller.c
+    Core/Src/stepper_button_control.c
     third_party/segger_rtt/RTT/SEGGER_RTT.c
     third_party/segger_rtt/RTT/SEGGER_RTT_printf.c
 )

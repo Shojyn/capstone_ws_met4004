@@ -29,6 +29,8 @@
 #include "water_sensor.h"
 #include "water_sensor_adc.h"
 #include "water_sensor_telemetry.h"
+#include "stepper_controller.h"
+#include "stepper_button_control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -122,6 +124,14 @@ static void MX_TIM3_Init(void);
 __attribute__((used)) const char fw_version_banner[] =
     "wcs_controller " FW_VERSION_STRING " (" FW_GIT_COMMIT_STRING ", "
     FW_BUILD_TYPE_STRING ")";
+
+void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
+{
+  if (htim == &htim3)
+  {
+    Stepper_OnPwmPulse();
+  }
+}
 
 /* Called by the generated EXTI handlers through the HAL. No delays or relay
  * writes belong here: each edge simply restarts the debounce interval. */
@@ -261,6 +271,10 @@ int main(void)
   LinearActuatorManual_Init(HAL_GPIO_ReadPin(btn_linear_1_GPIO_Port, btn_linear_1_Pin) == GPIO_PIN_SET,
                             HAL_GetTick());
   __set_PRIMASK(interrupt_state);
+  Stepper_Init();
+  StepperButtonControl_Init(HAL_GPIO_ReadPin(stepper_cw_GPIO_Port, stepper_cw_Pin) == GPIO_PIN_SET,
+                            HAL_GPIO_ReadPin(stepper_ccw_GPIO_Port, stepper_ccw_Pin) == GPIO_PIN_SET,
+                            HAL_GetTick());
   WaterSensor_Init(WaterSensorAdc_Read, HAL_GetTick());
   WaterSensorTelemetry_Init(HAL_GetTick());
   led_changed_at = HAL_GetTick();
@@ -284,6 +298,9 @@ int main(void)
     LinearActuatorManual_Update(HAL_GPIO_ReadPin(btn_linear_1_GPIO_Port, btn_linear_1_Pin) == GPIO_PIN_SET,
                                 HAL_GetTick(), __HAL_GPIO_EXTI_GET_IT(btn_linear_1_Pin) != RESET);
     __set_PRIMASK(interrupt_state);
+    StepperButtonControl_Update(HAL_GPIO_ReadPin(stepper_cw_GPIO_Port, stepper_cw_Pin) == GPIO_PIN_SET,
+                                HAL_GPIO_ReadPin(stepper_ccw_GPIO_Port, stepper_ccw_Pin) == GPIO_PIN_SET,
+                                HAL_GetTick());
     /* End a valve lockout before accepting a new button press at its boundary. */
     Valve_Update(now);
     if (Valve_GetActiveValve() == VALVE_1 &&
