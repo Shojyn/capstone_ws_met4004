@@ -219,6 +219,6 @@ Every push to `main` updates [CHANGELOG.md](CHANGELOG.md), creates one tag (`v0.
 # Commit Check
 Each contributor adds an X next to their name and commits the change.\
 ELTON:X369 Git is Tough\
-MAX:\
+MAX:X\
 NAVEEN:X\
 JENSEN:
