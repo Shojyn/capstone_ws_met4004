@@ -216,6 +216,8 @@ fix(stm): correct valve timeout handling
 
 Every push to `main` updates [CHANGELOG.md](CHANGELOG.md), creates one tag (`v0.x.y`), and publishes a GitHub Release from that tag. Use a patch bump for fixes and a minor bump for new features. Record build, host-test, and hardware verification status in the same entry; do not claim hardware verification from a successful flash alone.
 
+TEST
+
 # Commit Check
 Each contributor adds an X next to their name and commits the change.\
 ELTON:X369 Git is Tough\
