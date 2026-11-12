@@ -26,6 +26,29 @@ The VS Code extensions do **not** replace the CMake, Ninja, or compiler executab
 
 ### Set up WSL build tools
 
+The repository includes an idempotent setup script. Run it from the repository
+root, or provide its path from any directory; it resolves the repository from
+the script location rather than requiring a particular filesystem path:
+
+```bash
+bash scripts/setup-wsl.sh
+```
+
+The script asks before changing apt-managed packages. Use `--yes` for an
+unattended setup:
+
+```bash
+bash scripts/setup-wsl.sh --yes
+```
+
+It detects and installs or updates the required Linux build tools, installs the
+Arm GNU Toolchain per-user, verifies all versions, builds the Debug firmware,
+and runs the host tests. It clearly reports each check and failure. It does
+not install Windows-only STM32CubeMX, J-Link Commander, or STM32CubeProgrammer;
+those must be installed separately on Windows when regeneration or flashing is
+required. A successful build and host-test run do not verify physical board
+behavior.
+
 1. Contributors require an Ubuntu WSL distribution and the VS Code **WSL** extension on Windows.
 2. Git and Ninja are installed through the WSL terminal:
 
@@ -215,6 +238,8 @@ fix(stm): correct valve timeout handling
 ## Changelog and releases
 
 Every push to `main` updates [CHANGELOG.md](CHANGELOG.md), creates one tag (`v0.x.y`), and publishes a GitHub Release from that tag. Use a patch bump for fixes and a minor bump for new features. Record build, host-test, and hardware verification status in the same entry; do not claim hardware verification from a successful flash alone.
+
+TEST
 
 # Commit Check
 Each contributor adds an X next to their name and commits the change.\
