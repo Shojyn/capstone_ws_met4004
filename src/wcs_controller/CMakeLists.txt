@@ -44,14 +44,14 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    Core/Src/valve_controller.c
-    Core/Src/linear_actuator_controller.c
-    Core/Src/linear_actuator_manual_control.c
-    Core/Src/water_sensor.c
-    Core/Src/water_sensor_adc.c
-    Core/Src/water_sensor_telemetry.c
-    Core/Src/stepper_controller.c
-    Core/Src/stepper_button_control.c
+    Core/Src/actuators/valve_controller.c
+    Core/Src/actuators/linear_actuator_controller.c
+    Core/Src/actuators/linear_actuator_manual_control.c
+    Core/Src/peripherals/water_sensor.c
+    Core/Src/peripherals/water_sensor_adc.c
+    Core/Src/peripherals/water_sensor_telemetry.c
+    Core/Src/actuators/stepper_controller.c
+    Core/Src/actuators/stepper_button_control.c
     third_party/segger_rtt/RTT/SEGGER_RTT.c
     third_party/segger_rtt/RTT/SEGGER_RTT_printf.c
 )

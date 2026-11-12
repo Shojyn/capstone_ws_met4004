@@ -8,7 +8,7 @@ The independent actuator test uses PF1 (`btn_linear_1`) as an active-high button
 
 With ENA jumpered, both direction outputs LOW stop/brake the motor. The first debounced OFF → ON press commands PF2 HIGH/PF3 LOW (extend); the next successful start commands PF2 LOW/PF3 HIGH (retract). A press during motion stops it (after the 30 ms debounce), while release merely rearms the button. Each movement automatically stops after **1 second** of drive. A 50 ms LOW/LOW interval is enforced before a new direction starts after a stop; a press during that interval schedules the requested direction, and another press can cancel it. At boot both outputs are LOW, and a button held HIGH at boot cannot start motion until released and pressed again.
 
-`Core/Src/linear_actuator_controller.c` owns PF2/PF3, direction states, the one-second timeout, and the reversal pause. `Core/Src/linear_actuator_manual_control.c` owns PF1 debounce and the one-button alternating-direction policy. The EXTI callback only records an edge; all motor writes occur from the main loop. The valve and actuator controllers are independent.
+`Core/Src/actuators/linear_actuator_controller.c` owns PF2/PF3, direction states, the one-second timeout, and the reversal pause. `Core/Src/actuators/linear_actuator_manual_control.c` owns PF1 debounce and the one-button alternating-direction policy. The EXTI callback only records an edge; all motor writes occur from the main loop. The valve and actuator controllers are independent.
 
 There is no actuator position sensing or end limit. Begin away from both mechanical ends: even a one-second timeout cannot prevent an endpoint impact when less than one second of travel remains. If the physical direction is reversed, exchange the motor leads. Test PF2/PF3 LOW at boot, first-press extend, timeout stop, next-press retract, press-to-stop, release-to-rearm, and valve independence on the board.
 
@@ -49,7 +49,7 @@ Valve purposes and timing:
 Valve 1's output remains HIGH until the water threshold is reached. Valve 2 and
 Valve 3 outputs remain HIGH for 10 seconds. Every valve relay stays LOW during
 its 5-second closing lockout. These timings live in
-`Core/Src/valve_controller.c`.
+`Core/Src/actuators/valve_controller.c`.
 
 Only one valve cycle runs at a time to prevent fill, drain, and collection from overlapping. Presses while operating or closing are ignored; there is no queue or timer restart. The ignored button must be released and pressed again after the controller returns to idle.
 
@@ -57,7 +57,7 @@ Both rising and falling edges invoke the generated EXTI handlers. The applicatio
 
 Outputs initialize LOW and all commanded states reset to CLOSED. Each switch must first be observed LOW for 30 ms before its rising transition can start an operation. A switch already ON at startup does not start anything; it must be turned OFF, allowed to debounce, then turned ON. The commands do not confirm physical valve position. LD1 blinks at a nonblocking 250 ms interval only during the closing lockout; it is driven LOW during idle and while a valve output is open. The valve relay GPIO itself stays steady: HIGH while open and LOW during the closing lockout.
 
-The GPIO mapping and commanded states are owned by `Core/Src/valve_controller.c`, with the API declared in `Core/Inc/valve_controller.h`:
+The GPIO mapping and commanded states are owned by `Core/Src/actuators/valve_controller.c`, with the API declared in `Core/Inc/actuators/valve_controller.h`:
 
 ```c
 bool started = Valve_StartOperation(VALVE_1, now);

@@ -1,5 +1,5 @@
-#include "stepper_button_control.h"
-#include "stepper_controller.h"
+#include "actuators/stepper_button_control.h"
+#include "actuators/stepper_controller.h"
 
 #define STEPPER_BUTTON_DEBOUNCE_MS 30U
 

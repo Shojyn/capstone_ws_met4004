@@ -1,4 +1,4 @@
-#include "stepper_controller.h"
+#include "actuators/stepper_controller.h"
 #include "main.h"
 
 extern TIM_HandleTypeDef htim3;

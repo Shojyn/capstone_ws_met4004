@@ -1,6 +1,6 @@
-#include "water_sensor_telemetry.h"
+#include "peripherals/water_sensor_telemetry.h"
 #include "SEGGER_RTT.h"
-#include "water_sensor.h"
+#include "peripherals/water_sensor.h"
 
 #define WATER_SENSOR_TELEMETRY_INTERVAL_MS 100U
 

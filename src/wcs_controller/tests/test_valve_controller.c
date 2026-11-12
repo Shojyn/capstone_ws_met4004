@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #include "fakes/main.h"
-#include "../Core/Inc/valve_controller.h"
+#include "actuators/valve_controller.h"
 
 GPIO_TypeDef test_gpioe = {0U};
 static GPIO_PinState outputs[VALVE_COUNT];

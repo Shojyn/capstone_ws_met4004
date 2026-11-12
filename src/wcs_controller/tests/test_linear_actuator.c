@@ -5,8 +5,8 @@
 #include <stdint.h>
 
 #include "fakes/main.h"
-#include "../Core/Inc/linear_actuator_controller.h"
-#include "../Core/Inc/linear_actuator_manual_control.h"
+#include "actuators/linear_actuator_controller.h"
+#include "actuators/linear_actuator_manual_control.h"
 
 GPIO_TypeDef test_gpiof = {0U};
 static GPIO_PinState in1;
