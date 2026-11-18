@@ -54,8 +54,12 @@ static void ResetFakes(void)
   pwm_stops = 0U;
 }
 
-static void TestExactMove(void)
+static void TestDistributedMoves(void)
 {
+  static const uint32_t expected_moves[] = {914U, 914U, 914U, 915U,
+                                             914U, 914U, 915U};
+  uint32_t total_pulses = 0U;
+
   ResetFakes();
   Stepper_Init();
   assert(!Stepper_IsBusy());
@@ -66,21 +70,38 @@ static void TestExactMove(void)
   assert(pwm_starts == 1U);
   assert(!Stepper_Start(STEPPER_COUNTER_CLOCKWISE));
 
-  for (uint32_t i = 0U; i < 113U; ++i)
+  for (uint32_t pulse = 0U; pulse < expected_moves[0] - 1U; ++pulse)
   {
     Stepper_OnPwmPulse();
   }
   assert(Stepper_IsBusy());
-  assert(Stepper_GetPulseCount() == 113U);
+  assert(Stepper_GetPulseCount() == expected_moves[0] - 1U);
   assert(pwm_stops == 0U);
 
   Stepper_OnPwmPulse();
   assert(!Stepper_IsBusy());
-  assert(Stepper_GetPulseCount() == 114U);
+  assert(Stepper_GetPulseCount() == expected_moves[0]);
   assert(pwm_stops == 1U);
   Stepper_OnPwmPulse();
-  assert(Stepper_GetPulseCount() == 114U);
+  assert(Stepper_GetPulseCount() == expected_moves[0]);
   assert(pwm_stops == 1U);
+
+  total_pulses += Stepper_GetPulseCount();
+  for (uint32_t move = 1U; move < 7U; ++move)
+  {
+    assert(Stepper_Start(STEPPER_CLOCKWISE));
+    for (uint32_t pulse = 0U; pulse < expected_moves[move]; ++pulse)
+    {
+      Stepper_OnPwmPulse();
+    }
+    assert(!Stepper_IsBusy());
+    assert(Stepper_GetPulseCount() == expected_moves[move]);
+    total_pulses += Stepper_GetPulseCount();
+  }
+
+  assert(total_pulses == 6400U);
+  assert(pwm_starts == 7U);
+  assert(pwm_stops == 7U);
 }
 
 static void TestDirection(void)
@@ -105,7 +126,7 @@ static void TestButtons(void)
   assert(pwm_starts == 1U);
   assert(direction == GPIO_PIN_RESET);
 
-  for (uint32_t i = 0U; i < 114U; ++i)
+  for (uint32_t i = 0U; i < 914U; ++i)
   {
     Stepper_OnPwmPulse();
   }
@@ -129,7 +150,7 @@ static void TestButtons(void)
 
 int main(void)
 {
-  TestExactMove();
+  TestDistributedMoves();
   TestDirection();
   TestButtons();
   return 0;

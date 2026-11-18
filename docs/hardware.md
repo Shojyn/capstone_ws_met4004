@@ -31,7 +31,7 @@ test procedure for the NUCLEO-F746ZG controller.
 | Stepper clockwise button | PF5 | Digital input, pull-down | Reserved for active-high button input |
 | Stepper counter-clockwise button | PF6 | Digital input, pull-down | Reserved for active-high button input |
 | Stepper direction | PA5 | Push-pull output | LOW at boot |
-| Stepper STEP | PA6 | TIM3 CH1 alternate function | 100 Hz, active-low PWM configuration |
+| Stepper STEP | PA6 | TIM3 CH1 alternate function | 400 Hz, active-high PWM configuration |
 | LD1 | PB0 | Push-pull output | Blinks only while a valve is closing |
 | LD2 | PB7 | Push-pull output | Blinks while water is detected |
 | User button | PC13 | Input | Not used by the application |
@@ -41,19 +41,21 @@ test procedure for the NUCLEO-F746ZG controller.
 Buttons connect between the pin and 3.3 V. All valve and actuator outputs are
 driven LOW at startup.
 
-## Stepper initialization checkpoint
+## Stepper control
 
-The latest committed firmware configures the stepper hardware interface but does
-not yet implement button-driven movement. PF5 and PF6 are reserved for the
-clockwise and counter-clockwise buttons respectively, with internal pull-downs.
-PA5 is the direction output and initializes LOW. PA6 is TIM3 channel 1 and is
-configured for a 100 Hz active-low PWM signal with a 10 microsecond configured
-pulse. The TIM3 global interrupt is enabled in the generated NVIC/MSP setup.
+The stepper driver is configured for 1/32 microstepping, giving 6400 pulses per
+motor revolution for the 1.8 degree motor. PF5 and PF6 are the clockwise and
+counter-clockwise buttons respectively, with internal pull-downs. PA5 is the
+direction output and initializes LOW. PA6 is TIM3 channel 1 and generates an
+400 Hz active-high PWM signal with a 10 microsecond pulse. The TIM3 global
+interrupt is enabled in the generated NVIC/MSP setup.
 
-TIM3 PWM is not started during initialization, so PA6 does not generate a motor
-command until runtime stepper control is added. The button inputs are currently
-ordinary polled GPIOs; no stepper debounce or movement policy is included in
-this committed checkpoint.
+Each accepted button press commands either 914 or 915 pulses. The remainder is
+distributed so every seven accepted moves total exactly 6400 pulses, or one
+revolution. Individual moves are therefore approximately 51.4286 degrees but
+cannot all be identical because a pulse is indivisible. PWM is started only
+while a move is active; the button inputs are polled and debounced in the main
+loop.
 
 ## 12 V actuator power and L298N wiring
 
