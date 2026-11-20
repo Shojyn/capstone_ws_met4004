@@ -22,15 +22,15 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "valve_controller.h"
-#include "linear_actuator_controller.h"
-#include "linear_actuator_manual_control.h"
+#include "actuators/valve_controller.h"
+#include "actuators/linear_actuator_controller.h"
+#include "actuators/linear_actuator_manual_control.h"
 #include "fw_version.h"
-#include "water_sensor.h"
-#include "water_sensor_adc.h"
-#include "water_sensor_telemetry.h"
-#include "stepper_controller.h"
-#include "stepper_button_control.h"
+#include "peripherals/water_sensor.h"
+#include "peripherals/water_sensor_adc.h"
+#include "peripherals/water_sensor_telemetry.h"
+#include "actuators/stepper_controller.h"
+#include "actuators/stepper_button_control.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/

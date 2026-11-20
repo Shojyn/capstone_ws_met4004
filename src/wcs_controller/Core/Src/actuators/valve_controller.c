@@ -1,4 +1,4 @@
-#include "valve_controller.h"
+#include "actuators/valve_controller.h"
 #include "main.h"
 
 /* Physical travel times, measured/specified maximums. */

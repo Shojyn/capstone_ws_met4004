@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <stdint.h>
 
-#include "water_sensor.h"
+#include "peripherals/water_sensor.h"
 
 static uint16_t fake_raw;
 static bool fake_read_success;

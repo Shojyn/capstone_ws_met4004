@@ -1,4 +1,4 @@
-#include "water_sensor.h"
+#include "peripherals/water_sensor.h"
 
 #define WATER_SENSOR_SAMPLE_INTERVAL_MS 100U
 #define WATER_SENSOR_AVERAGE_SAMPLES 4U

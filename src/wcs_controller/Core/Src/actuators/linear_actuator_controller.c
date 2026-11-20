@@ -1,4 +1,4 @@
-#include "linear_actuator_controller.h"
+#include "actuators/linear_actuator_controller.h"
 #include "main.h"
 
 #define LINEAR_ACTUATOR_MAX_RUN_MS 1000U

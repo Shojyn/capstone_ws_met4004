@@ -1,5 +1,5 @@
-#include "linear_actuator_manual_control.h"
-#include "linear_actuator_controller.h"
+#include "actuators/linear_actuator_manual_control.h"
+#include "actuators/linear_actuator_controller.h"
 
 #define LINEAR_ACTUATOR_DEBOUNCE_MS 30U
 

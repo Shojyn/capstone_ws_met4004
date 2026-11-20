@@ -6,8 +6,8 @@
 #include <stdint.h>
 
 #include "fakes/main.h"
-#include "../Core/Inc/stepper_controller.h"
-#include "../Core/Inc/stepper_button_control.h"
+#include "actuators/stepper_controller.h"
+#include "actuators/stepper_button_control.h"
 
 GPIO_TypeDef test_gpioa = {0U};
 GPIO_TypeDef test_gpioe = {0U};
